@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/sS.dir/home/simon/streamingServer/serverMain.cpp.o -o sS  -Wl,-rpath,/usr/local/lib /usr/local/lib/libPocoFoundation.so.95 -lpthread -ldl -lrt 

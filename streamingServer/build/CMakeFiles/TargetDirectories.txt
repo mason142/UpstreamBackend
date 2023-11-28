@@ -1,0 +1,3 @@
+/home/simon/streamingServer/build/CMakeFiles/main.dir
+/home/simon/streamingServer/build/CMakeFiles/edit_cache.dir
+/home/simon/streamingServer/build/CMakeFiles/rebuild_cache.dir
