@@ -1,37 +1,32 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <unordered_map>
 
 class CustomHTTPReq {
     private:
         std::string _verb;
         std::string _location;
         std::string _version;
-        std::string _type;
-        int _length;
-        bool _keepAlive;
         std::vector<char> _body;
+        std::unordered_map<std::string, std::string> _headers;
 
     public:
         CustomHTTPReq();
         ~CustomHTTPReq();
 
+        void parseHeader(const std::string& headerLine);
         bool parseRequest(const std::string& httpRequest);
+        void parseBody(std::istringstream& iss, int contentLength);
 
         void setVerb(const std::string& verb);
         void setLocation(const std::string& loc);
         void setVersion(const std::string& ver);
-        void setType(const std::string& type);
-        void setLength(int length);
-        void setKeepAlive(bool ka);
-
-        void printReqDetails();
         std::string formatHeader();
 
         std::string getVerb() {return _verb; }
         std::string getLocation() {return _location; }
         std::string getVersion() {return _version; }
-        std::string getType() {return _type; }
-        int getLength() { return _length; }
-        bool getKeepAlive() { return _keepAlive; }
+        std::unordered_map<std::string, std::string> getHeaders() {return _headers; }
+        std::vector<char> getBody() { return _body; }
 };

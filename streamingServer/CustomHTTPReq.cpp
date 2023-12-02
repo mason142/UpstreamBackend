@@ -4,12 +4,27 @@ CustomHTTPReq::CustomHTTPReq() {
     _verb = std::string("");
     _location = std::string("");
     _version = std::string("");
-    _type = std::string("");
-    _length = 0;
-    _keepAlive = false;
+    _headers;
 }
 
 CustomHTTPReq::~CustomHTTPReq() {
+}
+
+void CustomHTTPReq::parseHeader(const std::string& headerLine) {
+    // Assuming a simple header format like "He aderName: HeaderValue"
+    size_t pos = headerLine.find(':');
+    if (pos != std::string::npos) {
+        std::string name = headerLine.substr(0, pos);
+        std::string value = headerLine.substr(pos + 2); // Skip ':' and space
+        _headers[name] = value;
+    }
+}
+
+void CustomHTTPReq::parseBody(std::istringstream& iss, int contentLength) {
+    const int bufferSize = contentLength;
+    char buffer[bufferSize];
+    iss.read(buffer, bufferSize);
+    std::vector<char> _body(buffer, buffer + bufferSize);
 }
 
 bool CustomHTTPReq::parseRequest(const std::string& httpRequest) {
@@ -29,36 +44,13 @@ bool CustomHTTPReq::parseRequest(const std::string& httpRequest) {
     if (_version != "HTTP/1.1") {
         return false;
     }
-
-    std::string header;
-    while (std::getline(iss, header) && header != "\r") {
-        size_t pos = header.find(':');
-        if (pos != std::string::npos) {
-            std::string key = header.substr(0, pos);
-            std::string value = header.substr(pos + 1);
-            value.erase(0, value.find_first_not_of(' '));
-            value.erase(value.find_last_not_of(' ') + 1);
-
-            if (key == "Content-Type") {
-                _type = value;
-            } else if (key == "Content-Length") {
-                _length = std::stoi(value);
-            } else if (key == "Connection")  {
-                if (value == "keep-alive") {
-                    _keepAlive = true;
-                }
-                else {
-                    _keepAlive = false;
-                }
-            } else {
-                return false;
-            }
-        }
+    std::string line;
+    while (std::getline(iss, line) && !line.empty()) {
+        parseHeader(line);
     }
-
-    char c;
-    while (iss.get(c)) {
-        _body.push_back(c);
+    if (_headers.find("Content-Length") != _headers.end()) {
+        int contentLength = std::stoi(_headers["Content-Length"]);
+        parseBody(iss, contentLength);
     }
     return true;
 }
@@ -75,39 +67,11 @@ void CustomHTTPReq::setVersion(const std::string& ver) {
     _version = ver;
 }
 
-void CustomHTTPReq::setType(const std::string& type) {
-    _type = type;
-}
-
-void CustomHTTPReq::setLength(int length) {
-    _length = length;
-}
-
-void CustomHTTPReq::setKeepAlive(bool keepAlive) {
-    _keepAlive = keepAlive;
-}
-
-void CustomHTTPReq::printReqDetails() {
-    std::cout << "Verb: " << _verb << std::endl;
-    std::cout << "Location: " << _location << std::endl;
-    std::cout << "Version: " << _version << std::endl;
-    std::cout << "Content-Type: " << _type << std::endl;
-    std::cout << "Content-Length: " << _length << std::endl;
-
-    std::cout << "Body: ";
-    for (char c : _body) {
-        std::cout << c;
-    }
-    std::cout << std::endl;
-}
-
 std::string CustomHTTPReq::formatHeader() {
     std::ostringstream details;
 
     details << "Verb: " << _verb << _location << _version << "\n";
-    details << "Content-Type: " << _type << "\n";
-    details << "Content-Length: " << _length << "\n";
-
+    // need to add headers..
     details << "\r\n";
     for (char c : _body) {
         details << c;
