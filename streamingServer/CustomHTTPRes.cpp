@@ -20,7 +20,7 @@ std::string CustomHTTPRes::toString() {
     }
 
     os << "\r\n"; // End of headers
-    os << body << std::endl;
+    os << body <<  "\r\n" << std::endl;
     return os.str();
 }
 

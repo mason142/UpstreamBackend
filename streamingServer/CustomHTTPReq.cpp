@@ -4,7 +4,8 @@ CustomHTTPReq::CustomHTTPReq() {
     _verb = std::string("");
     _location = std::string("");
     _version = std::string("");
-    _headers;
+    _headers = std::unordered_map<std::string, std::string>();
+    _type = std::string("");
 }
 
 CustomHTTPReq::~CustomHTTPReq() {
@@ -16,7 +17,10 @@ void CustomHTTPReq::parseHeader(const std::string& headerLine) {
         std::string name = headerLine.substr(0, pos);
         std::string value = headerLine.substr(pos + 2); // Skip ':' and space
         _headers[name] = value;
-        //std::cout << "Name = " << name << "Value = " << value << "\n";
+        if (name == "Content-Type") {
+            _type = value;
+        }
+        std::cout << "Name = " << name << "Value = " << _headers[name]<< "\n";
     }
 }
 

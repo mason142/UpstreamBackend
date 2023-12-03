@@ -10,6 +10,7 @@ class CustomHTTPReq {
         std::string _version;
         std::vector<char> _body;
         std::unordered_map<std::string, std::string> _headers;
+        std::string _type;
 
     public:
 
@@ -29,6 +30,7 @@ class CustomHTTPReq {
         std::string getVerb() {return this->_verb; }
         std::string getLocation() {return _location; }
         std::string getVersion() {return _version; }
+        std::string getType() {return _type; }
         std::unordered_map<std::string, std::string> getHeaders() {return _headers; }
         std::vector<char> getBody() { return _body; }
 };
