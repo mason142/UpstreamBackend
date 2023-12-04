@@ -2,6 +2,7 @@
 #include <sstream>
 #include <vector>
 #include <unordered_map>
+#include <assert.h>
 
 class CustomHTTPReq {
     private:
@@ -24,7 +25,7 @@ class CustomHTTPReq {
         void setVerb(const std::string& verb);
         void setLocation(const std::string& loc);
         void setVersion(const std::string& ver);
-        void setBody(const char* buffer);
+        void setBody(const std::vector<char>& charVector);
         std::string formatHeader();
 
         std::string getVerb() {return this->_verb; }

@@ -6,6 +6,7 @@ CustomHTTPReq::CustomHTTPReq() {
     _version = std::string("");
     _headers = std::unordered_map<std::string, std::string>();
     _type = std::string("");
+    _body = std::vector<char>();
 }
 
 CustomHTTPReq::~CustomHTTPReq() {
@@ -20,7 +21,7 @@ void CustomHTTPReq::parseHeader(const std::string& headerLine) {
         if (name == "Content-Type") {
             _type = value;
         }
-        std::cout << "Name = " << name << "Value = " << _headers[name]<< "\n";
+        //std::cout << "Name = " << name << "Value = " << _headers[name]<< "\n";
     }
 }
 
@@ -41,7 +42,7 @@ void CustomHTTPReq::parseBody(std::istringstream& iss, int contentLength) {
 
 bool CustomHTTPReq::parseRequest(const std::string& httpRequest) {
     
-    std::cout << "In parse request.\n";
+    //std::cout << "In parse request.\n";
 
     std::istringstream iss(httpRequest);
 
@@ -70,14 +71,15 @@ bool CustomHTTPReq::parseRequest(const std::string& httpRequest) {
         std::cout << "Reached end of file\n";
         return false;
     }
-    std::unordered_map<std::string, std::string>::const_iterator got = _headers.find("Content-Length");
-    if (got != _headers.end()) {
-        int contentLength = std::stoi(got->second);
-        parseBody(iss, contentLength);
-    }
-    else {
-        std::cout << "No content-Length found\n";
-    }
+    //std::unordered_map<std::string, std::string>::const_iterator got = _headers.find("Content-Length");
+    //if (got != _headers.end()) {
+    //    int contentLength = std::stoi(got->second);
+    //    parseBody(iss, contentLength);
+   // }
+    //else {
+    //    std::cout << "No content-Length found\n";
+    //}
+    //std::cout << "Size of body : "<< _body.size() << "\n";
     return true;
 }
 
@@ -93,9 +95,7 @@ void CustomHTTPReq::setVersion(const std::string& ver) {
     _version = ver;
 }
 
-void CustomHTTPReq::setBody(const char* buffer) {
-    size_t arraySize = sizeof(buffer) / sizeof(char);
-    std::vector<char> charVector(buffer, buffer + arraySize);
+void CustomHTTPReq::setBody(const std::vector<char>& charVector) {
     _body = charVector;
 }
 
