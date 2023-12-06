@@ -170,7 +170,7 @@ namespace
 						}
 					}
 					if (type == 8) {
-						std::cout << "SAVING PPS\n\n";
+						//std::cout << "SAVING PPS\n\n";
 						if (!stvb->addPPS(request->getBody())) {
 							delete request;
 							return;
@@ -178,7 +178,7 @@ namespace
 						}
 					}
 					if (type == 6) {
-						std::cout << "SAVING MYSTERY\n";
+						//std::cout << "SAVING MYSTERY\n";
 						if (!stvb->addpreIFrame(request->getBody())) {
 							std::cout << "\nERROR AT STAGE" << type << "\n";
 							delete request;
@@ -186,7 +186,7 @@ namespace
 						}
 					}
 					else if (type == 5) {
-						std::cout << "SAVING IFRAME\n";
+						//std::cout << "SAVING IFRAME\n";
 						if (!stvb->addIFrame(request->getBody())) {
 							std::cout << "\nERROR AT STAGE" << type << "\n";
 							delete request;
