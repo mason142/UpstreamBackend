@@ -3,10 +3,12 @@
 #include "include/CustomHTTPRes.h"
 #include "include/CustomSocket.h"
 #include "include/StreamVideoBuffer.h"
+#include "include/SlowStreamCircularBuffer.h"
 #include <chrono>
 #include <thread>
 
 std::map<int, std::vector<StreamVideoBuffer*>> liveStreams;
+std::map<int, SlowStreamCircularBuffer*> slowLiveStreams;
 int id = 0;
 int stvbInd1 = 1;
 int isID1Streaming = 0;
@@ -29,40 +31,51 @@ namespace
 			liveStreams[++id] = *stream;
 			return id;
 		}
+
+		int createNewSlowLiveStreamingSession(std::vector<char> title) {
+			SlowStreamCircularBuffer *slowStream = new SlowStreamCircularBuffer(60);
+			slowStream->allocateFrames();
+			slowLiveStreams[++id] = slowStream;
+			return id;
+		}
+
 		
 		void streamVideo(int streamId, CustomHTTPReq *req) {
-			std::cout << "In Stream Video\n";
 			if (!isID1Streaming) { return; }
-			if (stvbInd1 == 0) { sleep(1000); }
+			if (stvbInd1 == 0) { sleep(1); }
 			int currentStreamBufInd = (stvbInd1 - 1) % 10;
 			currentStreamBufInd = 0;
+			std::vector<StreamVideoBuffer*> currentStreamBuf = liveStreams[streamId];
+			StreamVideoBuffer *streamBuff = currentStreamBuf[currentStreamBufInd];
+
+			if (!streamBuff) {
+				printf("Stream Doesnt Exist\n");
+			}
 			CustomSocket sock = CustomSocket();
 			std::string ip = req->getHeaders()["Client-IP"];
 			std::string port = req->getHeaders()["Client-Port"];
-			std::cout << "Going to send data on client IP = " << ip.c_str() << "Port number = " << port << '\n';
 			ip = ip.substr(0, ip.size() - 1);
 			port = port.substr(0, port.size() - 1);
 			if (sock.connectSocket(ip.c_str(), std::stoi(port)) == -1) {
 				std::cout << "Couldnt make sock\n";
 				return;
 			}
-			std::vector<StreamVideoBuffer*> currentStreamBuf = liveStreams[streamId];
-			StreamVideoBuffer *streamBuff = currentStreamBuf[currentStreamBufInd];
+
 			int stage = 1;
 			int pFramesSent = 0;
 			std::cout << "About to send data from stvbInd = " << currentStreamBufInd << '\n';
 			while (1) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(16));
+				std::this_thread::sleep_for(std::chrono::milliseconds(33));
 				int sent = 0;
 				if (stage == 1) {
 					sent += sock.sendSocket(streamBuff->sps, streamBuff->sizeSPS);
-					std::cout << "Sending SPS, size = " << streamBuff->sizeSPS << "\n";
+					std::this_thread::sleep_for(std::chrono::milliseconds(33));
 					sent += sock.sendSocket(streamBuff->pps, streamBuff->sizePPS);
-					std::cout << "Sending PPS, size = " << streamBuff->sizePPS << "\n";
+					std::this_thread::sleep_for(std::chrono::milliseconds(33));
 					sent += sock.sendSocket(streamBuff->preIFrame, streamBuff->sizepreIFrame);
-					std::cout << "Sending preIFrame, size = " << streamBuff->sizepreIFrame << "\n";
+					std::this_thread::sleep_for(std::chrono::milliseconds(33));
 					sent += sock.sendSocket(streamBuff->iFrame, streamBuff->sizeiFrame);
-					std::cout << "Sending iFrame, size = " << streamBuff->sizeiFrame << "\n";
+					std::this_thread::sleep_for(std::chrono::milliseconds(33));
 					if (sent != (streamBuff->sizeiFrame + streamBuff->sizepreIFrame + streamBuff->sizePPS + streamBuff->sizeSPS)) {
 						std::cout << "Failed to send all data!\n\n";
 					}
@@ -86,87 +99,135 @@ namespace
 						if (streamBuff->hasWriter) {
 							std::cout << "Caught up to streamer, need to sleep\n\n";
 							sleep(1);
-							if (streamBuff->hasWriter) {
-								return;
-							}
 						}
 					}
 				}
 			}
 		}
 
+		void streamSlowVideo(int streamId, CustomHTTPReq *req) {
+			std::cout << "In Stream Slow Video\n";
+			if (!isID1Streaming) { return; }
+			CustomSocket sock = CustomSocket();
+			std::string ip = req->getHeaders()["Client-IP"];
+			std::string port = req->getHeaders()["Client-Port"];
+			//std::cout << "Going to send data on client IP = " << ip.c_str() << "Port number = " << port << '\n';
+			ip = ip.substr(0, ip.size() - 1);
+			port = port.substr(0, port.size() - 1);
+			if (sock.connectSocket(ip.c_str(), std::stoi(port)) == -1) {
+				std::cout << "Couldnt make sock\n";
+				return;
+			}
+			SlowStreamCircularBuffer *sscb = slowLiveStreams[streamId];
+			if (!sscb) {
+				return;
+			}
+			// Start sending ten frames behind the streamer
+			int currentFrame = sscb->currentWriterFrame - 1;
+			printf("Current frame = %d\n", currentFrame);
+			while (1) {
+				while (currentFrame == sscb->currentWriterFrame) {
+					sleep(1);
+				}
+				sock.sendSocket(sscb->frameData[currentFrame], sscb->frameSize[currentFrame]);
+				currentFrame++;
+			}
+		}	
+
 		void recordVideo(CustomHTTPReq* req, StreamSocket &ss) {
 			std::vector<StreamVideoBuffer*> stream = liveStreams[1]; //hardcoded...
 			int stvbInd = 0;
 			isID1Streaming = 1;
 			StreamVideoBuffer *stvb = stream[stvbInd];
+			if (!stvb) {
+				return;
+			}
 			int stage = 2;
 			stvb->addSPS(req->getBody());
 			delete req;
 			int pFramesRecv = 0;
 			while (stvbInd < 10) {
 				char buffer[8192];
-				//int n = ss.receiveBytes(buffer, sizeof(buffer));
-				//std::cout << "About to read header in loop\n";
 				int n = readHTTPHeader(buffer, ss);
 				CustomHTTPReq *request = new CustomHTTPReq();
-				//std::string msg;
-				//Logger::formatDump(msg, buffer, n);
-				//std::cout << msg << std::endl;
 				std::string http(buffer); 
 				if (request->parseRequest(http)) {
-					//std::cout <<  "Parsed request\n";
-					//std::cout << request->getVerb().c_str();
 					int type = handleBody(request, ss, n);
-					//std::cout << "Type" << type << "\n";
+					type = std::stoi(request->getHeaders()["NALU-Type"]);
 					if (type == 7) {
 						pFramesRecv = 0;
 						stvb->hasWriter = 0;
 						stvbInd++;
 						stvbInd1 = stvbInd;
 						std::cout << "Recording stvbInd = " << (stvbInd % 10) << "\n";
-						if (stvbInd == 10) {
-							stvbInd = 1;
-						}
 						stvb = stream[(stvbInd % 10)];
 						assert(stvb);
 						stvb->clean();
-						std::cout << "Pointer : " << stvb;
-						std::cout << "\nSAVING SPS\n\n";
 						if (!stvb->addSPS(req->getBody())) {
-							std::cout << "\nERROR AT STAGE" << stage << "\n";
+							std::cout << "\nERROR AT STAGE" << type << "\n";
+							delete request;
+							return;
 						}
 					}
 					if (type == 8) {
 						std::cout << "SAVING PPS\n\n";
 						if (!stvb->addPPS(request->getBody())) {
-							std::cout << "\nERROR AT STAGE" << stage << "\n";
+							delete request;
+							return;
+							std::cout << "\nERROR AT STAGE" << type << "\n";
 						}
 					}
 					if (type == 6) {
 						std::cout << "SAVING MYSTERY\n";
 						if (!stvb->addpreIFrame(request->getBody())) {
-							std::cout << "\nERROR AT STAGE" << stage << "\n";
+							std::cout << "\nERROR AT STAGE" << type << "\n";
+							delete request;
+							return;
 						}
 					}
 					else if (type == 5) {
 						std::cout << "SAVING IFRAME\n";
 						if (!stvb->addIFrame(request->getBody())) {
-							std::cout << "\nERROR AT STAGE" << stage << "\n";
+							std::cout << "\nERROR AT STAGE" << type << "\n";
+							delete request;
+							return;
 						}
 					}
 					else if (type == 1) {
 						//std::cout << "SAVING PFRAME " << pFramesRecv << "\n";
 						if (!stvb->addpFrame(request->getBody())) {
-							std::cout << "\nERROR AT STAGE" << stage << "\n";
+							std::cout << "\nERROR AT STAGE" << type << "\n";
+							delete request;
+							return;
 						}
 						pFramesRecv++;
 					}
 				}
 				else {
 					std::cout << "\n\n\n\n" << "Big time parse error\n\n\n\n";
+					delete request;
+					return;
 				}
 				delete request;
+			}
+		}
+
+
+		/* For uncompressed video (doesn't work on any real networks)*/
+		void recordSlowVideo(CustomHTTPReq* req, StreamSocket &ss) {
+			isID1Streaming = 1;
+			SlowStreamCircularBuffer *sscb = slowLiveStreams[1];
+			sscb->appendFrame(req->getBody());
+			delete req;
+			while (1) {
+				char buffer[8192];
+				int n = readHTTPHeader(buffer, ss);
+				CustomHTTPReq *request = new CustomHTTPReq();
+				std::string http(buffer); 
+				if (request->parseRequest(http)) {
+					handleBody(request, ss, n);
+					sscb->appendFrame(request->getBody());
+				}
 			}
 		}
 
@@ -193,16 +254,42 @@ namespace
 					}
 					return;
 				}
+				if (req->getLocation() == std::string("/slowstreams") && std::string(req->getHeaders()["Data-Type"]) == std::string("Text\r")) {
+					std::cout << "Requested Slow Stream\n";
+					int id = createNewSlowLiveStreamingSession(req->getBody());
+					CustomHTTPRes response(200);
+					response.addHeader("Content-Type", "text/plain");
+					std::vector<char> readBuffer = req->getBody();
+					std::string body = std::string(readBuffer.begin(), readBuffer.end());
+					response.addHeader("Content-Length", std::to_string(1));
+					response.setBody(std::to_string(id));
 
-				std::cout << "\n" << std::string(req->getHeaders()["Content-Type"]) << "\n";
-				std::cout << (req->getLocation() == std::string("/streams/1")) << " " << (std::string(req->getHeaders()["Content-Type"]) == std::string("UpstreamedVideo\r")) << '\n';
+					// Send the HTTP response
+					std::string resStr = response.toString();
+					int resLen = resStr.length();
+					std::cout << resStr;
+					int sent = ss.sendBytes(resStr.c_str(), resLen);
+					if (sent != resLen) {	
+						std::cout << "Sent : " << sent << "Bytes" << "Buffer had :" << resLen << "Bytes \n";
+					}
+					return;
+				}
+				//hardcoded for stream 1
 				if (req->getLocation() == std::string("/streams/1") && std::string(req->getHeaders()["Content-Type"]) == std::string("UpstreamedVideo\r")) {
 					recordVideo(req, ss);
+				}
+				//hardcoded for stream 1
+				if (req->getLocation() == std::string("/slowstreams/1") && std::string(req->getHeaders()["Content-Type"]) == std::string("UpstreamedVideo\r")) {
+					std::cout << "slowStreams\n";
+					recordSlowVideo(req, ss);
 				}
 			}
 			if (req->getVerb() == std::string("GET")) {
 				if (req->getLocation() == std::string("/streams/1") && std::string(req->getHeaders()["Content-Type"]) == std::string("StreamRequest\r")) {
 					streamVideo(1, req);
+				}
+				if (req->getLocation() == std::string("/slowstreams/1") && std::string(req->getHeaders()["Content-Type"]) == std::string("StreamRequest\r")) {
+					streamSlowVideo(1, req);
 				}
 			}
 		}
@@ -211,24 +298,16 @@ namespace
 			if (req->getVerb() == std::string("POST")) {
 				std::unordered_map<std::string, std::string> headers = req->getHeaders();
 				int contentLength = std::stoi(headers["Content-Length"]);
-				//std::cout << "Content length is " << contentLength << " req->body " << req->getBody().size() << '\n';
 				if (req->getBody().size() != contentLength) {
 					char buffer[contentLength];
-					//std::cout << sizeof(buffer);
 					int n = ss.receiveBytes(buffer, sizeof(buffer) - 1);
 					while (n != contentLength) {
 						char *temp_buffer = &buffer[n];
 						n += ss.receiveBytes(temp_buffer, contentLength - n);
-						//std::cout << "This better be equal to content length" << n << "\n";
 					}
-					//std::cout << "The last 5 bits are :" << (buffer[4] & 0x1F);
 					size_t arraySize = sizeof(buffer) / sizeof(char);
 					std::vector<char> charVector(buffer, buffer + arraySize);
 					req->setBody(charVector);
-					//std::string msg;
-					//Logger::formatDump(msg, buffer, contentLength);
-					//std::cout << msg <<	 std::endl;
-					//std::cout << "Body is now" << buffer;
 					return buffer[4] & 0x1F;
 				}
 			}
@@ -250,7 +329,6 @@ namespace
 					}
 				}
 			}
-			//std::cout << index;
 			return index;
 		}
 
@@ -261,17 +339,10 @@ namespace
 			try
 			{
 				char buffer[8192];
-				//int n = ss.receiveBytes(buffer, sizeof(buffer));
-				std::cout << "About to read header\n";
 				int n = readHTTPHeader(buffer, ss);
-				std::cout << n;
 				while (n > 0)
 				{ 
 					CustomHTTPReq *request = new CustomHTTPReq();
-					std::string msg;
-					Logger::formatDump(msg, buffer, n);
-					std::cout << msg << std::endl;
-					std::cout << "Received " << n << " bytes:" << std::endl;
 					std::string http(buffer); 
 					if (request->parseRequest(http)) {
 						//std::cout <<  "Parsed request\n";

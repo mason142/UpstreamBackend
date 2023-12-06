@@ -21,7 +21,6 @@ void CustomHTTPReq::parseHeader(const std::string& headerLine) {
         if (name == "Content-Type") {
             _type = value;
         }
-        //std::cout << "Name = " << name << "Value = " << _headers[name]<< "\n";
     }
 }
 
@@ -36,13 +35,10 @@ void CustomHTTPReq::parseBody(std::istringstream& iss, int contentLength) {
 
     buffer[bufferSize] = '\0';
     std::vector<char> temp(buffer, buffer + bufferSize);
-    //std::cout << buffer << "\n";
-    _body = temp;
+
 }
 
 bool CustomHTTPReq::parseRequest(const std::string& httpRequest) {
-    
-    //std::cout << "In parse request.\n";
 
     std::istringstream iss(httpRequest);
 
@@ -57,8 +53,6 @@ bool CustomHTTPReq::parseRequest(const std::string& httpRequest) {
         return false;
     }
 
-    //std::cout << this->getVerb().c_str() << "Passed the checks\n";
-    
     std::string line;
     std::getline(iss, line);
     std::getline(iss, line);
@@ -71,15 +65,6 @@ bool CustomHTTPReq::parseRequest(const std::string& httpRequest) {
         std::cout << "Reached end of file\n";
         return false;
     }
-    //std::unordered_map<std::string, std::string>::const_iterator got = _headers.find("Content-Length");
-    //if (got != _headers.end()) {
-    //    int contentLength = std::stoi(got->second);
-    //    parseBody(iss, contentLength);
-   // }
-    //else {
-    //    std::cout << "No content-Length found\n";
-    //}
-    //std::cout << "Size of body : "<< _body.size() << "\n";
     return true;
 }
 

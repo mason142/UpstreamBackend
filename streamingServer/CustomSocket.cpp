@@ -33,8 +33,5 @@ int CustomSocket::connectSocket(std::string ip, int port) {
 }
 
 int CustomSocket::sendSocket(char *data, int len) {
-    for (int i = 0; i < len; i++) {
-        printf("0x%02hhx ", data[i]);
-    }
     return send(sd, data, len, 0);
 }

@@ -9,7 +9,7 @@ StreamVideoBuffer::StreamVideoBuffer() {
     pFrame = (char **)malloc(64 * sizeof(char *));
     sizepFrame = (int *)malloc(64 * sizeof(int));
     for (int i = 0; i < 64; i++) {
-        pFrame[i] = (char *)malloc(48000 * sizeof(char));
+        pFrame[i] = (char *)malloc(64000 * sizeof(char));
         sizepFrame[i] = 0;
         assert(pFrame[i]);
     }
@@ -23,21 +23,26 @@ StreamVideoBuffer::StreamVideoBuffer() {
 }
 
 bool StreamVideoBuffer::clean() {
+    for (int i = 0; i < numPFrames; i++) {
+        sizepFrame[i] = 0;
+    }
     numPFrames = 0;
     hasWriter = 1;
     sizeSPS = 0;
     sizePPS = 0;
     sizeiFrame = 0;
+
     return true;
 }
 
 
 bool StreamVideoBuffer::addSPS(std::vector<char> data) {
     sizeSPS = data.size();
-    std::cout << data.size();
+    //std::cout << data.size();
     for(int i = 0; i != data.size(); i++) {
-        std::cout << i;
+        //std::cout << i;
         if (i >= 64) {
+            std::cout << "SPSsize is too big! " << sizeSPS << "\n";
             return false;
         }
         //printf("0x%02hhx ", data[i]);
@@ -49,6 +54,7 @@ bool StreamVideoBuffer::addPPS(std::vector<char> data) {
     sizePPS = data.size();
     for(int i = 0; i != data.size(); i++) {
         if (i >= 64) {
+            std::cout << "PPSsize is too big! " << sizePPS << "\n";
             return false;
         }
         //printf("0x%02hhx ", data[i]);
@@ -60,6 +66,7 @@ bool StreamVideoBuffer::addpreIFrame(std::vector<char> data) {
     sizepreIFrame = data.size();
     for(int i = 0; i != data.size(); i++) {
         if (i >= 32000) {
+            std::cout << "Ipreframe is too big! " << sizepreIFrame << "\n";
             return false;
         }
         //printf("0x%02hhx ", data[i]);
@@ -81,6 +88,7 @@ bool StreamVideoBuffer::addIFrame(std::vector<char> data) {
 }
 bool StreamVideoBuffer::addpFrame(std::vector<char> data) {
     if (numPFrames == 64) {
+
         return false;
     }
     assert(&data);
@@ -88,7 +96,8 @@ bool StreamVideoBuffer::addpFrame(std::vector<char> data) {
     assert(pFrame[numPFrames]);
     sizepFrame[numPFrames] = data.size();
     for(int i = 0; i != data.size(); i++) {
-        if (i >= 48000) {
+        if (i >= 64000) {
+            std::cout << "PFrame is too big! " << sizepFrame[numPFrames] << "\n";
             return false;
         }
         assert(&data);
