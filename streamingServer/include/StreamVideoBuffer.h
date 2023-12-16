@@ -1,3 +1,5 @@
+#ifndef STREAMVIDEOBUFFER_H
+#define STREAMVIDEOBUFFER_H
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -19,6 +21,7 @@ class StreamVideoBuffer {
         int *sizepFrame;
 
         StreamVideoBuffer();
+        int getSize();
         bool addSPS(std::vector<char> data);
         bool addPPS(std::vector<char> data);
         bool addpreIFrame(std::vector<char> data);
@@ -26,3 +29,4 @@ class StreamVideoBuffer {
         bool addpFrame(std::vector<char> data);
         bool clean();
 };
+#endif

@@ -1,3 +1,5 @@
+#ifndef CUSTOMHTTPREQ_H
+#define CUSTOMHTTPREQ_H
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -35,3 +37,4 @@ class CustomHTTPReq {
         std::unordered_map<std::string, std::string> getHeaders() {return _headers; }
         std::vector<char> getBody() { return _body; }
 };
+#endif

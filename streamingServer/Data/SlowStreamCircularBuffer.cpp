@@ -1,4 +1,4 @@
-#include "include/SlowStreamCircularBuffer.h"
+#include "../include/streamingServer.h"
 #include <assert.h>
 
 SlowStreamCircularBuffer::SlowStreamCircularBuffer(int mF) {

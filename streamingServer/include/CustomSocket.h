@@ -1,3 +1,5 @@
+#ifndef CUSTOMSOCKET_H
+#define CUSTOMSOCKET_H
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -18,3 +20,4 @@ class CustomSocket {
         int connectSocket(std::string ip, int port);
         int sendSocket(char *data, int len);
 };
+#endif

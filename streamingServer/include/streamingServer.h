@@ -7,6 +7,16 @@
 #include "Poco/Process.h"
 #include "Poco/NamedEvent.h"
 #include <iostream>
+#include "./CustomHTTPReq.h"
+#include "./CustomHTTPRes.h"
+#include "./CustomSocket.h"
+#include "./SlowStreamCircularBuffer.h"
+#include "./StreamDatabase.h"
+#include <regex>
+//#include "./StreamVideoBuffer.h"
+#include <chrono>
+#include <thread>
+
 
 
 using Poco::Net::TCPServer;

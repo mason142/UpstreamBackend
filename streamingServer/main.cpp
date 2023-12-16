@@ -1,11 +1,4 @@
-#include "include/streamingServer.h"
-#include "include/CustomHTTPReq.h"
-#include "include/CustomHTTPRes.h"
-#include "include/CustomSocket.h"
-#include "include/StreamVideoBuffer.h"
-#include "include/SlowStreamCircularBuffer.h"
-#include <chrono>
-#include <thread>
+#include "./include/httputils.h"
 
 std::map<int, std::vector<StreamVideoBuffer*>> liveStreams;
 std::map<int, SlowStreamCircularBuffer*> slowLiveStreams;
@@ -21,7 +14,10 @@ namespace
 		ClientConnection(const StreamSocket& s): TCPServerConnection(s)
 		{
 		}
-		
+		bool matchesRegex(const std::string& str, const std::string& regexPattern) {
+			std::regex pattern(regexPattern);
+			return std::regex_match(str, pattern);
+		}
 		int createNewLivestreamingSession(std::vector<char> title) {
 			std::vector<StreamVideoBuffer*> *stream = new std::vector<StreamVideoBuffer*>;
 			for (int i = 0; i < 10; i++) {
@@ -274,8 +270,7 @@ namespace
 					}
 					return;
 				}
-				//hardcoded for stream 1
-				if (req->getLocation() == std::string("/streams/1") && std::string(req->getHeaders()["Content-Type"]) == std::string("UpstreamedVideo\r")) {
+				if (matchesRegex(req->getLocation(), R"(/streams/[0-9]+)") && std::string(req->getHeaders()["Content-Type"]) == std::string("UpstreamedVideo\r")) {
 					recordVideo(req, ss);
 				}
 				//hardcoded for stream 1
@@ -292,44 +287,6 @@ namespace
 					streamSlowVideo(1, req);
 				}
 			}
-		}
-
-		int handleBody(CustomHTTPReq *req, StreamSocket& ss, int bytesRec) {
-			if (req->getVerb() == std::string("POST")) {
-				std::unordered_map<std::string, std::string> headers = req->getHeaders();
-				int contentLength = std::stoi(headers["Content-Length"]);
-				if (req->getBody().size() != contentLength) {
-					char buffer[contentLength];
-					int n = ss.receiveBytes(buffer, sizeof(buffer) - 1);
-					while (n != contentLength) {
-						char *temp_buffer = &buffer[n];
-						n += ss.receiveBytes(temp_buffer, contentLength - n);
-					}
-					size_t arraySize = sizeof(buffer) / sizeof(char);
-					std::vector<char> charVector(buffer, buffer + arraySize);
-					req->setBody(charVector);
-					return buffer[4] & 0x1F;
-				}
-			}
-			return 0;
-		}
-
-		int readHTTPHeader(char *bufferBase, StreamSocket &ss) {
-			char *buffer = bufferBase;
-			int index = 0;
-			while (index < 4 || (bufferBase[index-1]!='\n'||bufferBase[index-2]!='\r'||bufferBase[index-3]!='\n'||bufferBase[index-4]!='\r')) {
-				int n = ss.receiveBytes(buffer, 1);
-				if (n > 0) {
-					buffer++;
-					index++;
-					if (index > 2048) {
-						std::cout << "Buffer overflow!\n";
-						std::cout << bufferBase;
-						return -1;
-					}
-				}
-			}
-			return index;
 		}
 
 		void run()
@@ -388,6 +345,7 @@ int main(int argc, char** argv)
 	{
 		Poco::UInt16 port = NumberParser::parse((argc > 1) ? argv[1] : "9090");
 		TCPServer srv(new TCPFactory(), port);
+		StreamDatabase* sdb = new StreamDatabase();
 		srv.start();
 
 		std::cout << "TCP server listening on port " << port << '.'

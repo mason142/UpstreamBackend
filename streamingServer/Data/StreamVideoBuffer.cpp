@@ -1,4 +1,4 @@
-#include "include/StreamVideoBuffer.h"
+#include "../include/streamingServer.h"
 
 
 StreamVideoBuffer::StreamVideoBuffer() {
@@ -20,6 +20,14 @@ StreamVideoBuffer::StreamVideoBuffer() {
     sizePPS = 0;
     sizeiFrame = 0;
     sizepreIFrame = 0;
+}
+
+int StreamVideoBuffer::getSize() {
+    int size = sizeSPS + sizePPS + sizeiFrame + sizepreIFrame;
+    for (int i = 0; i < 64; i++) {
+        size += sizepFrame[i];
+    }
+    return size;
 }
 
 bool StreamVideoBuffer::clean() {
@@ -76,7 +84,7 @@ bool StreamVideoBuffer::addpreIFrame(std::vector<char> data) {
 }
 bool StreamVideoBuffer::addIFrame(std::vector<char> data) {
     sizeiFrame = data.size();
-    std::cout << "I Frame Size = " << data.size() << "\n";
+    //std::cout << "I Frame Size = " << data.size() << "\n";
     for(int i = 0; i != data.size(); i++) {
         if (i >= 256000) {
             std::cout << "iFrame too large for buffer! size = " << data.size() << "\n"; 

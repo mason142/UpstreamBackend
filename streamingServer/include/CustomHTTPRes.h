@@ -1,3 +1,5 @@
+#ifndef CUSTOMHTTPRES_H
+#define CUSTOMHTTPRES_H
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -15,3 +17,4 @@ class CustomHTTPRes {
         std::string toString();
         std::string getStatusMessage();
 };
+#endif

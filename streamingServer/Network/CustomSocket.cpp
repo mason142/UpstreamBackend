@@ -1,5 +1,4 @@
-#include "include/CustomSocket.h"
-#include <string.h>
+#include "../include/streamingServer.h"
 
 CustomSocket::CustomSocket() {
 
